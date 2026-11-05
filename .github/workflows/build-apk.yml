@@ -20,23 +20,38 @@ jobs:
           mkdir -p app
           unzip -o *.zip -d app
 
+      - name: Find project folder
+        run: |
+          PACKAGE_JSON=$(find app -type f -name package.json \
+            -not -path '*/node_modules/*' -print -quit)
+
+          if [ -z "$PACKAGE_JSON" ]; then
+            echo "ERROR: package.json not found in ZIP archive"
+            find app -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$PACKAGE_JSON")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project found: $PROJECT_DIR"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         run: |
-          cd app
+          cd "$PROJECT_DIR"
           npm install
 
       - name: Build web app
         run: |
-          cd app
+          cd "$PROJECT_DIR"
           npm run build
 
       - name: Upload build files
         uses: actions/upload-artifact@v4
         with:
           name: china-trade-pro-build
-          path: app/dist/
+          path: ${{ env.PROJECT_DIR }}/dist/
